@@ -195,7 +195,7 @@ public:
 
 	void					Save( idSaveGame *savefile ) const;
 	void					Restore( idRestoreGame *savefile );
-
+	//int						GetElement(void);			//returns element
 	const char *			GetEntityDefName( void ) const;
 	void					SetName( const char *name );
 	const char *			GetName( void ) const;

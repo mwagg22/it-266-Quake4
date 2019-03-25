@@ -196,6 +196,7 @@ class idInventory {
 public:
 	int						maxHealth;
 	int						weapons;
+	int						gems;
 // RITUAL BEGIN
 // squirrel: Mode-agnostic buymenus
 	int						carryOverWeapons;
@@ -312,6 +313,9 @@ public:
 		bool		attackHeld		:1;
 		bool		weaponFired		:1;
 		bool		jump			:1;
+		bool		double_jumping			:1;
+		bool		glyding			:1;
+		bool		flying			:1;
 		bool		crouch			:1;
 		bool		onGround		:1;
 		bool		onLadder		:1;
@@ -327,6 +331,8 @@ public:
 		bool		hearingLoss		:1;
 		bool		objectiveFailed	:1;
 		bool		noFallingDamage :1;
+		bool		melee_attacking		:1;
+		bool		charge : 1;
 	} pfl;
 		
 	// inventory
@@ -355,7 +361,10 @@ public:
 	int						nextAmmoRegenPulse[ MAX_AMMO ];	// time when ammo will regenerate
 	int						nextArmorPulse;		// time when armor will tick down
 	bool					hiddenWeapon;		// if the weapon is hidden ( in noWeapons maps )
-
+	int						element;			//element toggle 0:fire,1:lighnint:3:water/dark?
+	bool					flying;			//element toggle 0:fire,1:lighnint:3:water/dark?
+	bool					can_attack;    //can attack clause
+	int						combo_meter; //combo number
 	// mp stuff
 	int						spectator;
 
@@ -433,7 +442,8 @@ public:
 
 	void					Spawn( void );
 	void					Think( void );
-
+	int						GetElement(void);			//returns element
+	void					Melee_Attacks(void);	//Melee handler
 	// save games
 	void					Save( idSaveGame *savefile ) const;					// archives object for save game file
 	void					Restore( idRestoreGame *savefile );					// unarchives object from save game file
@@ -548,7 +558,8 @@ public:
 	// Powerups
 	bool					GivePowerUp					( int powerup, int time, bool team = false );
 	void					ClearPowerUps				( void );
-
+	//void					ElementPower				(void);
+	//void					GemCollision				(void);
 	void					StartPowerUpEffect			( int powerup );
 	void					StopPowerUpEffect			( int powerup );
 	
@@ -1153,7 +1164,8 @@ private:
 	stateResult_t			State_Legs_Fall					( const stateParms_t& parms );
 	stateResult_t			State_Legs_Land					( const stateParms_t& parms );
 	stateResult_t			State_Legs_Dead					( const stateParms_t& parms );
-	
+	stateResult_t			State_Legs_Melee				( const stateParms_t& parms);
+
  	CLASS_STATES_PROTOTYPE( idPlayer );
 };
 

@@ -60,6 +60,8 @@ public:
 	void					Save( idSaveGame *savefile ) const;
 	void					Restore( idRestoreGame *savefile );
 
+	void					SetWater(void);
+	void					UnsetWater(void);
 							// initialisation
 	void					SetSpeed( const float newWalkSpeed, const float newCrouchSpeed );
 	void					SetMaxStepHeight( const float newMaxStepHeight );
@@ -178,8 +180,10 @@ private:
 	void					CheckDuck( void );
 	void					CheckLadder( void );
 	bool					CheckJump( void );
+	bool					CheckDoubleJump(void);
 	bool					CheckWaterJump( void );
 	void					SetWaterLevel( void );
+
 	void					DropTimers( void );
 	void					MovePlayer( int msec );
 

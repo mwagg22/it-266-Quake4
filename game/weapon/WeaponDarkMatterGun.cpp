@@ -96,7 +96,7 @@ void rvWeaponDarkMatterGun::Spawn ( void ) {
 	InitRing ( RING_MIDDLE, "middle" );
 	
 	nextRotateTime = 0;
-	
+	AmmoElement = 1;
 	chargeDuration = SEC2MS ( spawnArgs.GetFloat ( "chargeDuration", ".5" ) );
 	
 	jointCore = viewModel->GetAnimator()->GetJointHandle ( spawnArgs.GetString ( "joint_core" ) );

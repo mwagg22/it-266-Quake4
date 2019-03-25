@@ -513,7 +513,10 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view, i
 	if ( RF_NO_GUI & renderFlags ) {
 		return;
 	}
-
+	if (pm_thirdPerson.GetBool()) {
+		g_showHud.SetBool(true);
+		player->DrawHUD(hud);
+	}
 	// draw screen blobs
 	if ( !pm_thirdPerson.GetBool() && !g_skipViewEffects.GetBool() ) {
 		for ( int i = 0 ; i < MAX_SCREEN_BLOBS ; i++ ) {

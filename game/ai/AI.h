@@ -754,7 +754,8 @@ public:
 	virtual bool			Pain							( idEntity *inflictor, idEntity *attacker, int damage, const idVec3 &dir, int location );
 	virtual void			Killed							( idEntity *inflictor, idEntity *attacker, int damage, const idVec3 &dir, int location );
 	bool					CheckDeathCausesMissionFailure	( void );
-
+	virtual void			Damage(idEntity *inflictor, idEntity *attacker, const idVec3 &dir, const char *damageDefName, const float damageScale, const int location);
+	int						AffinityType = (rand() % (2 + 1 - 0) + 0);;
 	// attacks
 	virtual bool			Attack							( const char* attackName, jointHandle_t joint, idEntity* target, const idVec3& pushVelocity = vec3_origin );
 	virtual idProjectile*	AttackRanged					( const char* attackName, const idDict* attackDict, jointHandle_t joint, idEntity* target, const idVec3& pushVelocity = vec3_origin );

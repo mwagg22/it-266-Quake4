@@ -651,7 +651,7 @@ void rvWeapon::Spawn ( void ) {
  	hideDistance		= weaponDef->dict.GetFloat( "hide_distance", "-15" );
  	hideStartTime		= gameLocal.time - hideTime;
  	muzzleOffset		= weaponDef->dict.GetFloat ( "muzzleOffset", "14" );
-
+	owner->element = spawnArgs.GetInt("weapon_element");
 	// Ammo
 	clipSize			= spawnArgs.GetInt( "clipSize" );
 	ammoRequired		= spawnArgs.GetInt( "ammoRequired" );
@@ -957,6 +957,34 @@ void rvWeapon::InitDefs( void ) {
 		wfl.attackAltHitscan = true;
 	} 
 
+	// Melee projectile
+	attackMeleeDict.Clear();
+	if (spawnArgs.GetString("def_altprojectile_melee", "", &name) && *name) {
+		def = gameLocal.FindEntityDef(name, false);
+		if (!def) {
+			gameLocal.Warning("Unknown melee projectile '%s' for weapon '%s'", name, weaponDef->GetName());
+		}
+		else {
+			spawnclass = def->dict.GetString("spawnclass");
+			cls = idClass::GetClass(spawnclass);
+			if (!cls || !cls->IsType(idProjectile::GetClassType())) {
+				gameLocal.Warning("Invalid spawnclass '%s' for melee projectile '%s' (used by weapon '%s')", spawnclass, name, weaponDef->GetName());
+			}
+			else {
+				attackMeleeDict = def->dict;
+			}
+		}
+	}
+	else if (spawnArgs.GetString("def_althitscan_melee", "", &name) && *name) {
+		def = gameLocal.FindEntityDef(name, false);
+		if (!def) {
+			gameLocal.Warning("Unknown melee hitscan '%s' for weapon '%s'", name, weaponDef->GetName());
+		}
+		else {
+			attackMeleeDict = def->dict;
+		}
+		wfl.attackMeleeHitscan = true;
+	}
 	// get the melee damage def
 	meleeDistance = spawnArgs.GetFloat( "melee_distance" );
 	if ( spawnArgs.GetString( "def_melee", "", &name ) && *name ) {
@@ -1361,6 +1389,7 @@ void rvWeapon::Save ( idSaveGame *savefile ) const {
 	savefile->WriteInt		( ammoClip );
 	savefile->WriteInt		( lowAmmo );
 	savefile->WriteInt		( maxAmmo );
+	savefile->WriteInt		(AmmoElement);
 
 	// multiplayer
  	savefile->WriteInt		( clipPredictTime );	// TOSAVE: Save MP value?
@@ -1473,6 +1502,21 @@ void rvWeapon::Restore ( idRestoreGame *savefile ) {
 		}
 	}
 
+	// Attack Melee Def
+	attackMeleeDict.Clear();
+	wfl.attackMeleeHitscan = false;
+	def = gameLocal.FindEntityDef(spawnArgs.GetString("def_altprojectile_melee"), false);
+	if (def) {
+		attackMeleeDict = def->dict;
+	}
+	else {
+		def = gameLocal.FindEntityDef(spawnArgs.GetString("def_althitscan_melee"), false);
+		if (def) {
+			attackMeleeDict = def->dict;
+			wfl.attackMeleeHitscan = true;
+		}
+	}
+
 	// Attack def
 	attackDict.Clear( );
 	def = gameLocal.FindEntityDef( spawnArgs.GetString( "def_projectile" ), false );
@@ -1528,7 +1572,7 @@ void rvWeapon::Restore ( idRestoreGame *savefile ) {
 	savefile->ReadInt		( ammoClip );
 	savefile->ReadInt		( lowAmmo );
 	savefile->ReadInt		( maxAmmo );
-
+	savefile->ReadInt		(AmmoElement);
 	// multiplayer
  	savefile->ReadInt		( clipPredictTime );		// TORESTORE: Restore MP value?
 
@@ -2593,10 +2637,16 @@ void rvWeapon::Attack( bool altAttack, int num_attacks, float spread, float fuse
 	if ( !gameLocal.isClient ) {
 		idDict& dict = altAttack ? attackAltDict : attackDict;
 		power *= owner->PowerUpModifier( PMOD_PROJECTILE_DAMAGE );
-		if ( altAttack ? wfl.attackAltHitscan : wfl.attackHitscan ) {
+		if (altAttack && !owner->pfl.melee_attacking ? wfl.attackAltHitscan : wfl.attackHitscan ) {
 			Hitscan( dict, muzzleOrigin, muzzleAxis, num_attacks, spread, power );
-		} else {
-			LaunchProjectiles( dict, muzzleOrigin, muzzleAxis, num_attacks, spread, fuseOffset, power );
+		}
+		else if (owner->pfl.melee_attacking)
+		{
+			idDict& dict = attackMeleeDict;
+			LaunchProjectiles(dict, muzzleOrigin, muzzleAxis, num_attacks, spread, fuseOffset, power);
+		}
+		else{
+			LaunchProjectiles(dict, muzzleOrigin, muzzleAxis, num_attacks, spread, fuseOffset, power);
 		}
 		//asalmon:  changed to keep stats even in single player 
 		statManager->WeaponFired( owner, weaponIndex, num_attacks );

@@ -286,6 +286,7 @@ public:
 	// Generic flags
 	struct weaponFlags_s {
 		bool		attackAltHitscan	:1;
+		bool		attackMeleeHitscan	:1;
 		bool		attackHitscan		:1;
 		bool		hide				:1;
 		bool		disabled			:1;
@@ -339,6 +340,7 @@ public:
 	// we maintain local copies of the projectile and brass dictionaries so they
 	// do not have to be copied across the DLL boundary when entities are spawned
 	idDict							attackAltDict;
+	idDict							attackMeleeDict;
 	idDict							attackDict;
 	idDict							brassDict;
 
@@ -367,10 +369,12 @@ public:
 	int								clipSize;			// 0 means no reload
 	int								ammoClip;
 	int								lowAmmo;			// if ammo in clip hits this threshold, snd_
-	int								maxAmmo;		
+	int								maxAmmo;
+	int								AmmoElement;        //element ammo type
 
  	// multiplayer
  	int								clipPredictTime;
+	int						hitscanAttackDef;
 
 	// these are the player render view parms, which include bobbing
 	idVec3							playerViewOrigin;
@@ -430,7 +434,7 @@ private:
 	int						methodOfDeath;
 
 	// multiplayer hitscans
-	int						hitscanAttackDef;
+	//int						hitscanAttackDef;
 
 	CLASS_STATES_PROTOTYPE ( rvWeapon );
 };

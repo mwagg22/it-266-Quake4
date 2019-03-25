@@ -152,10 +152,10 @@ void rvWeaponBlaster::Spawn ( void ) {
 	chargeGlow   = spawnArgs.GetVec2 ( "chargeGlow" );
 	chargeTime   = SEC2MS ( spawnArgs.GetFloat ( "chargeTime" ) );
 	chargeDelay  = SEC2MS ( spawnArgs.GetFloat ( "chargeDelay" ) );
-
+	owner->element = spawnArgs.GetInt("weapon_element");
 	fireHeldTime		= 0;
 	fireForced			= false;
-			
+	AmmoElement = 1;
 	Flashlight ( owner->IsFlashlightOn() );
 }
 

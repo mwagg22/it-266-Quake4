@@ -1464,6 +1464,112 @@ void idAI::RestoreFlag ( aiFlagOverride_t flag ) {
 	Damage
 
 ***********************************************************************/
+//DAMAGE
+void idAI::Damage(idEntity *inflictor, idEntity *attacker, const idVec3 &dir,
+	const char *damageDefName, const float damageScale, const int location) {
+	if (forwardDamageEnt.IsValid()) {
+		forwardDamageEnt->Damage(inflictor, attacker, dir, damageDefName, damageScale, location);
+		return;
+	}
+
+	if (!fl.takedamage) {
+		return;
+	}
+
+	if (!inflictor) {
+		inflictor = gameLocal.world;
+	}
+
+	if (!attacker) {
+		attacker = gameLocal.world;
+	}
+
+	const idDict *damageDef = gameLocal.FindEntityDefDict(damageDefName, false);
+	if (!damageDef) {
+		gameLocal.Error("Unknown damageDef '%s'\n", damageDefName);
+	}
+
+	int	damage = damageDef->GetInt("damage");
+
+	// inform the attacker that they hit someone
+	attacker->DamageFeedback(this, inflictor, damage);
+	if (damage) {
+		// do the damage
+		//jshepard: this is kin   Child *pChild =  (Child *) &parent; da important, no?
+		if (attacker->IsType(idPlayer::GetClassType())){
+			idPlayer *attackerp = dynamic_cast<idPlayer *>(attacker);
+			switch (attackerp->GetElement()){
+			case 0:{
+					   if (AffinityType == 0){
+						   gameLocal.Printf("Nope", AffinityType);
+						   health += (damage * 0.25f);
+						   break;
+					   }
+					   else if (AffinityType == 1){
+						   gameLocal.Printf("ouch", AffinityType);
+						   health -= (damage*1.5f);
+						   break;
+					   }
+					   else{
+						   gameLocal.Printf("aight", AffinityType);
+						   health -= (damage*0.25f);
+						   break;
+					   }
+
+			}
+			case 1:{
+					   if (AffinityType == 0){
+						   gameLocal.Printf("aight", AffinityType);
+						   health -= (damage);
+						   break;
+					   }
+					   else if (AffinityType == 1){
+						   gameLocal.Printf("Nope", AffinityType);
+						   health += (damage*.25f);
+						   break;
+					   }
+					   else{
+						   gameLocal.Printf("ouch", AffinityType);
+						   health -= (damage*1.5f);
+						   break;
+					   }
+			}
+			case 2:{
+					   if (AffinityType == 0){
+						   gameLocal.Printf("ouch", AffinityType);
+						   health -= (damage * 1.5f);
+						   break;
+					   }
+					   else if (AffinityType == 1){
+						   gameLocal.Printf("aight", AffinityType);
+						   health -= damage;
+						   break;
+					   }
+					   else{
+						   gameLocal.Printf("Nope", AffinityType);
+						   health += (damage*0.25f);
+						   break;
+					   }
+			}
+			}
+		}
+		else
+		{
+			health -= damage;
+		}
+
+		if (health <= 0) {
+			if (health < -999) {
+				health = -999;
+			}
+
+			Killed(inflictor, attacker, damage, dir, location);
+		}
+		else {
+			Pain(inflictor, attacker, damage, dir, location);
+		}
+	}
+}
 
 /*
 =====================
@@ -3684,7 +3790,7 @@ void idAI::OnDeath( void ){
 
 	ExecScriptFunction( funcs.death );
 
-/* DONT DROP ANYTHING FOR NOW
+
 	float rVal = gameLocal.random.RandomInt( 100 );
 
 	if( spawnArgs.GetFloat( "no_drops" ) >= 1.0 ){
@@ -3694,10 +3800,13 @@ void idAI::OnDeath( void ){
 		if( rVal < 25 ){	// Half of guys drop nothing?
 			spawnArgs.Set( "def_dropsItem1", "" );
 		}else if( rVal < 50 ){
-			spawnArgs.Set( "def_dropsItem1", "item_health_small" );
+			spawnArgs.Set( "def_dropsItem1", "item_gem_red" );
+		}
+		else if (rVal < 70){
+			spawnArgs.Set("def_dropsItem1", "item_gem_green");
 		}
 	}
-*/
+
 }
 
 /*

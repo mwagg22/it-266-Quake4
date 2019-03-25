@@ -42,7 +42,7 @@ CLASS_STATES_DECLARATION ( idPlayer )
 	STATE ( "Legs_Fall",					idPlayer::State_Legs_Fall )
 	STATE ( "Legs_Land",					idPlayer::State_Legs_Land )
 	STATE ( "Legs_Dead",					idPlayer::State_Legs_Dead )
-
+	STATE ( "Legs_Melee",					idPlayer::State_Legs_Melee)
 END_CLASS_STATES
 
 /*
@@ -429,7 +429,12 @@ stateResult_t idPlayer::State_Legs_Idle ( const stateParms_t& parms ) {
 				PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Crouch", parms.blendFrames );
 				return SRESULT_DONE;
 			}
+			//else if (pfl.melee_attacking) {
+			//	PostAnimState(ANIMCHANNEL_LEGS, "Legs_Melee", parms.blendFrames);
+			//	return SRESULT_DONE;
+			//}
 			IdleAnim ( ANIMCHANNEL_LEGS, "idle", parms.blendFrames );
+			
 			return SRESULT_STAGE ( STAGE_WAIT );
 		
 		case STAGE_WAIT:
@@ -440,14 +445,26 @@ stateResult_t idPlayer::State_Legs_Idle ( const stateParms_t& parms ) {
 			} else if ( pfl.jump ) {
 				PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Jump", 4 );
 				return SRESULT_DONE;
-			} else if ( !pfl.onGround ) {
+			}	
+			else if (pfl.melee_attacking) {
+				PostAnimState(ANIMCHANNEL_LEGS, "Legs_Melee", parms.blendFrames);
+				return SRESULT_DONE;
+			}
+			else if ( !pfl.onGround ) {
 				PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Fall", 4 );
 				return SRESULT_DONE;
 			}else if ( pfl.forward && !pfl.backward ) {
-				if( usercmd.buttons & BUTTON_RUN ) {
- 					PlayCycle( ANIMCHANNEL_LEGS, "run_forward", parms.blendFrames );
-					PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Run_Forward", parms.blendFrames );
-				} else {
+				if (usercmd.buttons & BUTTON_RUN) {
+					if (pfl.charge){
+						PlayCycle(ANIMCHANNEL_LEGS, "melee_charge", parms.blendFrames);
+						PostAnimState(ANIMCHANNEL_LEGS, "Legs_Run_Forward", parms.blendFrames);
+					}
+					else{
+						PlayCycle(ANIMCHANNEL_LEGS, "run_forward", parms.blendFrames);
+						PostAnimState(ANIMCHANNEL_LEGS, "Legs_Run_Forward", parms.blendFrames);
+					}
+				}
+				else {
 					PlayCycle( ANIMCHANNEL_LEGS, "walk_forward", parms.blendFrames );
 					PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Walk_Forward", parms.blendFrames );
 				}
@@ -581,18 +598,32 @@ idPlayer::State_Legs_Run_Forward
 ================
 */
 stateResult_t idPlayer::State_Legs_Run_Forward ( const stateParms_t& parms ) {
-	if ( !pfl.jump && pfl.onGround && !pfl.crouch && !pfl.backward && pfl.forward ) {
+	if (!pfl.jump && pfl.onGround && !pfl.crouch && !pfl.backward && pfl.forward) {
 		if( usercmd.buttons & BUTTON_RUN ) {
 			return SRESULT_WAIT;
-		} else {
+		}
+		else if (pfl.charge){
+			PlayCycle(ANIMCHANNEL_LEGS, "melee_charge", parms.blendFrames);
+			PostAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", parms.blendFrames);
+			return SRESULT_DONE;
+		}
+		else {
+			
 			PlayCycle( ANIMCHANNEL_LEGS, "walk_forward", parms.blendFrames );
 			PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Walk_Forward", parms.blendFrames );
 			return SRESULT_DONE;
 		}
 	}
 	PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Idle", parms.blendFrames );
+
 	return SRESULT_DONE;
 }
+
+/*
+================
+idPlayer::State_Legs_charge_Forward
+================
+*/
 
 /*
 ================
@@ -690,6 +721,69 @@ stateResult_t idPlayer::State_Legs_Walk_Backward ( const stateParms_t& parms ) {
 }
 
 /*
+================
+idPlayer::State_Leg_Melee
+================
+*/
+stateResult_t idPlayer::State_Legs_Melee(const stateParms_t& parms) {
+	enum {
+		STAGE_INIT,
+		STAGE_WAIT
+	};
+	switch (parms.stage) {
+	case STAGE_INIT:{
+						if (pfl.onGround) {
+							if (pfl.melee_attacking){
+								can_attack = false;
+								switch (combo_meter){
+								case 0:{
+										   PlayAnim(ANIMCHANNEL_LEGS, "melee_claw1", parms.blendFrames);
+										   weapon->Attack(true, 1, .4, 0, 1.0f);
+										   gameLocal.Printf("Should play animation here \n", element);
+										   return SRESULT_STAGE(STAGE_WAIT);
+										   break; 
+								}
+								case 1:{
+										   PlayAnim(ANIMCHANNEL_LEGS, "melee_claw2", parms.blendFrames);
+										   weapon->Attack(true, 1, .4, 0, 1.0f);
+										   gameLocal.Printf("Should play animation here \n", element);
+										   return SRESULT_STAGE(STAGE_WAIT);
+										   break;
+								}
+								case 2:{
+										   PlayAnim(ANIMCHANNEL_LEGS, "melee_first", parms.blendFrames);
+										   weapon->Attack(true, 1, .4, 0, 1.0f);
+										   gameLocal.Printf("Should play animation here \n", element);
+										   return SRESULT_STAGE(STAGE_WAIT);
+										   break;
+								}
+								}
+							}
+							else
+							{
+								can_attack = true;
+								PostAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", 20);
+								gameLocal.Printf("Got here? \n", element);
+								return SRESULT_DONE;
+								break;
+							}
+						}}
+
+	case STAGE_WAIT:{
+						pfl.melee_attacking = false;
+						gameLocal.Printf("false? \n", element);
+						PostAnimState(ANIMCHANNEL_LEGS, "Legs_Melee", 0);
+						return SRESULT_DONE_WAIT;
+						break;
+	}
+
+		pfl.melee_attacking = false;
+		gameLocal.Printf("huh? \n", element);
+		return SRESULT_DONE;
+	}
+}
+/*
+
 ================
 idPlayer::State_Legs_Walk_Left
 ================

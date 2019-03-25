@@ -136,7 +136,7 @@ void rvWeaponLightningGun::Spawn( void ) {
 	
 	trailEffectView = NULL;
 	nextCrawlTime	= 0;
-
+	AmmoElement = 2;
 	chainLightning.Clear( );
 	
 	// get hitscan range for our firing

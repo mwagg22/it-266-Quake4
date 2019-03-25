@@ -62,6 +62,14 @@ const float	PLAYER_ITEM_DROP_SPEED	= 100.0f;
 // how many units to raise spectator above default view height so it's in the head of someone
 const int SPECTATE_RAISE = 25;
 
+// Gem collectable count
+int gems=0;
+//int can_double = 1;
+//int element = 0;
+bool can_attack = true;
+bool flying = false;
+bool can_flying = true;
+bool can_glyde = true;
 const int	HEALTH_PULSE		= 1000;			// Regen rate and heal leak rate (for health > 100)
 const int	ARMOR_PULSE			= 1000;			// armor ticking down due to being higher than maxarmor
 const int	AMMO_REGEN_PULSE	= 1000;			// ammo regen in Arena CTF
@@ -203,7 +211,8 @@ void idInventory::Clear( void ) {
 	armor				= 0;
 	maxarmor			= 0;
 	secretAreasDiscovered = 0;
-
+	gems = 0;
+	
 	memset( ammo, 0, sizeof( ammo ) );
 
 	ClearPowerUps();
@@ -401,7 +410,7 @@ void idInventory::Save( idSaveGame *savefile ) const {
 	savefile->WriteInt( powerups );
 	savefile->WriteInt( armor );
 	savefile->WriteInt( maxarmor );
-
+	savefile->WriteInt( gems );
 	for( i = 0; i < MAX_AMMO; i++ ) {
 		savefile->WriteInt( ammo[ i ] );
 	}
@@ -888,7 +897,15 @@ bool idInventory::Give( idPlayer *owner, const idDict &spawnArgs, const char *st
 		if ( armor >= maxarmor * 2 ) {
 			return false;
 		}
-	} else 	if ( !idStr::Icmp( statname, "health" ) ) {
+	}
+	else if (!idStr::Icmp(statname, "gem")) {
+		gems += 1;
+		gameLocal.Printf("Gem Aquired +1 \n", gems);
+		if (gems > 200){
+			return false;
+		}
+	}
+	else if ( !idStr::Icmp( statname, "health" ) ) {
 		if ( owner->health >= maxHealth ) {
 			return false;
 		}
@@ -1098,6 +1115,8 @@ idPlayer::idPlayer() {
 
 	lastHitTime				= 0;
 	lastSavingThrowTime		= 0;
+	combo_meter = 0;
+	element = 0;
 
 	weapon					= NULL;
 
@@ -1172,9 +1191,10 @@ idPlayer::idPlayer() {
 	idealWeapon				= -1;
 	previousWeapon			= -1;
 	weaponSwitchTime		=  0;
-	weaponEnabled			= true;
- 	showWeaponViewModel		= true;
+	weaponEnabled			= false;
+ 	showWeaponViewModel		= false;
 	oldInventoryWeapons		= 0;
+	//element					= 0;
 
 // RAVEN BEGIN
 // mekberg: allow disabling of objectives during non-cinematic time periods
@@ -1383,7 +1403,7 @@ void idPlayer::SetWeapon( int weaponIndex ) {
 	}
 	
 	animPrefix = spawnArgs.GetString( va( "def_weapon%d", currentWeapon ) );
-
+	
 	idTypeInfo*	typeInfo;
 	weaponDef = GetWeaponDef( currentWeapon );
 	if ( !weaponDef ) {
@@ -1451,6 +1471,7 @@ void idPlayer::SetupWeaponEntity( void ) {
 		weaponViewModel = static_cast<rvViewWeapon*>(spawn);
 		weaponViewModel->SetName( va("%s_weapon", name.c_str() ) );
 		weaponViewModel->SetInstance( instance );
+		element = spawnArgs.GetInt("weapon_element");
 	}
 	
 			
@@ -1669,7 +1690,7 @@ void idPlayer::Init( void ) {
 	// initialize the script variables
 	memset ( &pfl, 0, sizeof( pfl ) );
 	pfl.onGround = true;
-	pfl.noFallingDamage = false;
+	pfl.noFallingDamage = true;
 
 	// Start in idle
 	SetAnimState( ANIMCHANNEL_TORSO, "Torso_Idle", 0 );
@@ -4234,6 +4255,17 @@ bool idPlayer::GiveItem( idItem *item ) {
 	if ( arg && hud ) {
 		hud->HandleNamedEvent( "healthPulse" );
 	}
+	arg = item->spawnArgs.MatchPrefix("inv_gem", NULL);
+	if (arg && hud) {
+		char buf[16]; // need a buffer for that
+		int i = gems;
+		sprintf(buf, "%d", i);
+		const char* p = buf;
+		const char *gemc = buf;
+		hud->SetStateString("gemcounter", gemc);
+		hud->SetStateString("itemicon", item->spawnArgs.GetString("inv_icon"));
+		hud->HandleNamedEvent("GemPickup");
+	}
 	arg = item->spawnArgs.MatchPrefix( "inv_weapon", NULL );
 	if ( arg && hud ) {
 		// We need to update the weapon hud manually, but not
@@ -4448,7 +4480,7 @@ void idPlayer::StartPowerUpEffect( int powerup ) {
 
 		case POWERUP_HASTE: {
 			powerUpOverlay = hasteOverlay;
-
+			
 			hasteEffect = PlayEffect( "fx_haste", GetPhysics()->GetOrigin(), GetPhysics()->GetAxis(), true );
 			break;
 		}
@@ -5149,12 +5181,26 @@ bool idPlayer::GiveInventoryItem( idDict *item ) {
 // mwhitlock: Dynamic memory consolidation
 	RV_POP_HEAP();
 // RAVEN END
+	char buf[16]; // need a buffer for that
+	int i = gems;
 
-	if ( hud ) {
-		const char *itemName = common->GetLocalizedString( item->GetString( "inv_name" ) );
-		hud->SetStateString ( "itemtext", itemName );
-		hud->SetStateString ( "itemicon", item->GetString( "inv_icon" ) );
-		hud->HandleNamedEvent ( "itemPickup" );
+	sprintf(buf, "%d", i);
+
+	const char* p = buf;
+	if (hud) {
+		const char *itemName = common->GetLocalizedString(item->GetString("inv_name"));
+		if (itemName == "#Red Gem Aquired" || "#Green Gem Aquired"){
+			const char *gemc = buf;
+			hud->SetStateString("gemcounter", gemc);
+			hud->SetStateString("itemicon", item->GetString("inv_icon"));
+			hud->HandleNamedEvent("GemPickup");
+			return true;
+		}
+		else{
+			hud->SetStateString("itemtext", itemName);
+			hud->SetStateString("itemicon", item->GetString("inv_icon"));
+			hud->HandleNamedEvent("itemPickup");
+		}
 	}
 	
 	return true;
@@ -5597,6 +5643,7 @@ void idPlayer::NextWeapon( void ) {
 	if ( ( w != currentWeapon ) && ( w != idealWeapon ) ) {
 		idealWeapon = w;
 		weaponSwitchTime = gameLocal.time + WEAPON_SWITCH_DELAY;
+		element = spawnArgs.GetInt("weapon_element");
 		UpdateHudWeapon();
 	}
 
@@ -6127,6 +6174,35 @@ void idPlayer::Weapon_Combat( void ) {
 }
 
 /*
+=======================
+Melee Attack
+=======================
+*/
+
+void idPlayer::Melee_Attacks(void){
+	if (can_attack){
+		if (!pfl.melee_attacking){
+			if (pfl.forward){
+				if (!pfl.charge && pfl.onGround){
+					pfl.charge = true;
+					UpdateState();	
+					SetAnimState(ANIMCHANNEL_LEGS, "Legs_Run_Forward", 0);
+					UpdateState();
+				}
+			}
+			else{
+				pfl.melee_attacking = true;
+				SetAnimState(ANIMCHANNEL_LEGS, "Legs_Melee", 0);
+				combo_meter += 1;
+				UpdateState();
+				if (combo_meter > 2){
+					combo_meter = 0;
+				}
+			}
+		}
+	}
+}
+/*
 ===============
 idPlayer::Weapon_Vehicle
 ===============
@@ -6565,7 +6641,8 @@ bool idPlayer::Collide( const trace_t &collision, const idVec3 &velocity ) {
 	}
 
 
-	if ( other ) {
+	if (other) {
+		pfl.charge = false;
 		other->Signal( SIG_TOUCH );
 		if ( !spectating ) {
 			if ( other->RespondsTo( EV_Touch ) ) {
@@ -7546,7 +7623,7 @@ void idPlayer::CrashLand( const idVec3 &oldOrigin, const idVec3 &oldVelocity ) {
 		landTime = gameLocal.time;
  		if ( !noDamage ) {
  			pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
- 			Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_fatalfall", 1.0f, 0 );
+ 			//Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_fatalfall", 1.0f, 0 );
  		}
 	} else if ( delta > hardFallDelta && hardFallDelta > 0.0f ) {
 		pfl.hardLanding = true;
@@ -7554,7 +7631,7 @@ void idPlayer::CrashLand( const idVec3 &oldOrigin, const idVec3 &oldVelocity ) {
 		landTime	= gameLocal.time;
  		if ( !noDamage ) {
  			pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
- 			Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_hardfall", 1.0f, 0 );
+ 			//Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_hardfall", 1.0f, 0 );
  		}
 	} else if ( delta > softFallDelta && softFallDelta > 0.0f ) {
 		pfl.softLanding = true;
@@ -7562,7 +7639,7 @@ void idPlayer::CrashLand( const idVec3 &oldOrigin, const idVec3 &oldVelocity ) {
  		landTime	= gameLocal.time;
  		if ( !noDamage ) {
  			pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
- 			Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_softfall", 1.0f, 0 );
+ 			//Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_softfall", 1.0f, 0 );
 		}
 	} else if ( delta > noFallDelta && noFallDelta > 0.0f ) {
 		pfl.softLanding = true;
@@ -8477,6 +8554,39 @@ void idPlayer::PerformImpulse( int impulse ) {
 			Reload();
 			break;
 		}
+		//Switch Element Type
+		case IMPULSE_23: {
+							 if (element == 0){
+								 element = 1; 
+								 gameLocal.Printf("change to lightning \n", element); //lightning
+								 PlayEffect("fx_guard", physicsObj.GetOrigin(), physicsObj.GetAxis(), true);
+							 }
+							 else if (element == 1){ element = 2;
+							 gameLocal.Printf("change to water \n", element); //water
+							 PlayEffect("fx_guard", physicsObj.GetOrigin(), physicsObj.GetAxis(), true);
+							 }
+							 else { element = 0; 
+							 gameLocal.Printf("change to fire \n",element);//fire
+							 PlayEffect("fx_guard", physicsObj.GetOrigin(), physicsObj.GetAxis(), true);
+							 }
+							 break;}
+		//Melee Attack
+		case IMPULSE_24: {
+							 Melee_Attacks();							 
+							 gameLocal.Printf("Melee button pressed \n", element);
+							 break; }
+		//Gem Collect
+		case IMPULSE_25: {
+							 //if (spawnArgs.GetString("def_projectile", "", &name) && *name) {
+							 //def = gameLocal.FindEntityDef(name, false);
+							 
+							 break; }
+		//set Flying
+		case IMPULSE_26: {
+								 physicsObj.SetWater();
+								 flying = true;
+								 break;
+		}
 		case IMPULSE_14: {
 			NextWeapon();
 			if( gameLocal.isServer && spectating && gameLocal.gameType == GAME_TOURNEY ) {	
@@ -8702,7 +8812,6 @@ void idPlayer::EvaluateControls( void ) {
 		}
 // RITUAL END
 	}
-
 	// in MP, idMultiplayerGame decides spawns
 	if ( forceRespawn && !gameLocal.isMultiplayer && !g_testDeath.GetBool() ) {
 		// in single player, we let the session handle restarting the level or loading a game
@@ -9037,12 +9146,13 @@ void idPlayer::Move( void ) {
  		pfl.onGround	= ( influenceActive == INFLUENCE_LEVEL2 );
 		pfl.onLadder	= false;
 		pfl.jump		= false;
+	//	pfl.double_jumping = false;
 	} else {
 		pfl.crouch	= physicsObj.IsCrouching();
 		pfl.onGround	= physicsObj.HasGroundContacts();
 		pfl.onLadder	= physicsObj.OnLadder();
 		pfl.jump		= physicsObj.HasJumped();
-
+	//	pfl.double_jumping = physicsObj.HasJumped();
  		// check if we're standing on top of a monster and give a push if we are
  		idEntity *groundEnt = physicsObj.GetGroundEntity();
 // RAVEN BEGIN
@@ -9069,6 +9179,14 @@ void idPlayer::Move( void ) {
 		acc->dir[2] = 200;
 		acc->dir[0] = acc->dir[1] = 0;
 	}
+
+	//if (pfl.double_jumping) {
+	//	loggedAccel_t	*acc = &loggedAccel[currentLoggedAccel&(NUM_LOGGED_ACCELS - 1)];
+	//	currentLoggedAccel++;
+	//	acc->time = gameLocal.time;
+	//	acc->dir[2] = 200;
+	//	acc->dir[0] = acc->dir[1] = 0;
+	//}
 
 	if ( pfl.onLadder ) {
 		int old_rung = oldOrigin.z / LADDER_RUNG_DISTANCE;
@@ -11553,9 +11671,9 @@ idPlayer::Event_AllowFallDamage
 */
 void idPlayer::Event_AllowFallDamage( int toggle ) {
 	if( toggle )	{
-		pfl.noFallingDamage = false;
-	} else {
 		pfl.noFallingDamage = true;
+	} else {
+		pfl.noFallingDamage = false;
 	}
 
 }
@@ -12791,6 +12909,20 @@ void idPlayer::HideTip( void ) {
 	tipUp = false;
 }
 
+/*
+===============
+idPlayer::GetElement
+===============
+*/
+int idPlayer::GetElement(void) {
+	return element;
+}
+
+/*
+===============
+idPlayer::GetElement
+===============
+*/
 /*
 ===============
 idPlayer::Event_HideTip
@@ -14073,5 +14205,6 @@ int idPlayer::CanSelectWeapon(const char* weaponName)
 
 	return weaponNum;
 }
+
 
 // RITUAL END

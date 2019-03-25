@@ -3,15 +3,16 @@
 
 #include "../Game_local.h"
 
-CLASS_DECLARATION( idPhysics_Actor, idPhysics_Player )
+CLASS_DECLARATION(idPhysics_Actor, idPhysics_Player)
 END_CLASS
 
 // movement parameters
+int can_double = 1;
 const float PM_STOPSPEED		= 100.0f;
-const float PM_SWIMSCALE		= 0.5f;
+const float PM_SWIMSCALE		= 30.5f;
 const float PM_LADDERSPEED		= 100.0f;
 const float PM_STEPSCALE		= 1.0f;
-
+bool waterFlag;
 const float PM_ACCELERATE_SP	= 10.0f;
 const float PM_AIRACCELERATE_SP	= 1.0f;
 const float PM_ACCELERATE_MP	= 15.0f;
@@ -567,7 +568,7 @@ void idPhysics_Player::WaterMove( void ) {
 
 	// user intentions
 	if ( !scale ) {
-		wishvel = gravityNormal * 60; // sink towards bottom
+		wishvel = gravityNormal * 10.0f; // sink towards bottom water sink
 	} else {
 		wishvel = scale * (viewForward * command.forwardmove + viewRight * command.rightmove);
 		wishvel -= scale * gravityNormal * command.upmove;
@@ -1020,7 +1021,10 @@ void idPhysics_Player::CheckGround( bool checkStuck ) {
 	bool hadGroundContacts;
 
 	hadGroundContacts = HasGroundContacts();
-
+	if (hadGroundContacts){
+		can_double = 1;		
+		
+	}
 	// set the clip model origin before getting the contacts
 	clipModel->SetPosition( current.origin, clipModel->GetAxis() );
 
@@ -1101,6 +1105,8 @@ void idPhysics_Player::CheckGround( bool checkStuck ) {
 	}
 
 	groundPlane = true;
+	UnsetWater();
+	((idPlayer*)self)->flying = false;
 	walking = true;
 
 	// hitting solid ground will end a waterjump
@@ -1113,7 +1119,7 @@ void idPhysics_Player::CheckGround( bool checkStuck ) {
 	if ( !hadGroundContacts ) {
 		// don't do landing time if we were just going down a slope
 		if ( (current.velocity * -gravityNormal) < -200.0f ) {
-			// don't allow another jump for a little while
+			 //don't allow another jump for a little while
 			current.movementFlags |= PMF_TIME_LAND;
 			current.movementTime = 250;
 		}		
@@ -1296,7 +1302,18 @@ bool idPhysics_Player::CheckJump( void ) {
 	addVelocity = 2.0f * maxJumpHeight * -gravityVector;
 	addVelocity *= idMath::Sqrt( addVelocity.Normalize() );
 	current.velocity += addVelocity;
-
+	
+	//if (command.upmove && can_double>0 && PMF_JUMPED) {
+		// not holding jump
+		//can_double -= 1;
+		//groundPlane = false;		// jumping away
+	//	walking = false;
+		//current.movementFlags = PMF_JUMPED;
+		//SetWater();
+		//addVelocity = 2.0f * maxJumpHeight * -gravityVector;
+		//addVelocity *= idMath::Sqrt(addVelocity.Normalize());
+		//current.velocity += addVelocity;
+	//}
 // RAVEN BEGIN
 // bdube: crouch slide, nick maggoire is awesome
 	current.crouchSlideTime = 0;
@@ -1304,7 +1321,25 @@ bool idPhysics_Player::CheckJump( void ) {
 
 	return true;
 }
-
+//Double Jump
+//bool idPhysics_Player::CheckDoubleJump(void){
+//	if (idPhysics_Player::CheckJump()){
+//		if (command.upmove < 10) {
+//			// not holding jump
+//			return false;
+//		}
+//		addVelocity = 2.0f * maxJumpHeight * -gravityVector;
+//		addVelocity *= idMath::Sqrt(addVelocity.Normalize());
+//		current.velocity += addVelocity;
+//
+//		// RAVEN BEGIN
+//		// bdube: crouch slide, nick maggoire is awesome
+//		current.crouchSlideTime = 0;
+//		// RAVEN END
+//
+//		return true;
+//	}
+//}
 /*
 =============
 idPhysics_Player::CheckWaterJump
@@ -1327,8 +1362,8 @@ bool idPhysics_Player::CheckWaterJump( void ) {
 	flatforward = viewForward - (viewForward * gravityNormal) * gravityNormal;
 	flatforward.Normalize();
 
-	spot = current.origin + 30.0f * flatforward;
-	spot -= 4.0f * gravityNormal;
+	spot = current.origin + 10.0f * flatforward;
+	spot -= 1.0f * gravityNormal;
 // RAVEN BEGIN
 // ddynerman: multiple collision worlds
 	cont = gameLocal.Contents( self, spot, NULL, mat3_identity, -1, self );
@@ -1337,7 +1372,7 @@ bool idPhysics_Player::CheckWaterJump( void ) {
 		return false;
 	}
 
-	spot -= 16.0f * gravityNormal;
+	spot -= 1.0f * gravityNormal;
 // RAVEN BEGIN
 // ddynerman: multiple collision worlds
 	cont = gameLocal.Contents( self, spot, NULL, mat3_identity, -1, self );
@@ -1347,9 +1382,12 @@ bool idPhysics_Player::CheckWaterJump( void ) {
 	}
 
 	// jump out of water
-	current.velocity = 200.0f * viewForward - 350.0f * gravityNormal;
+	current.velocity = 2.0f * maxJumpHeight * -gravityVector;
 	current.movementFlags |= PMF_TIME_WATERJUMP;
 	current.movementTime = 2000;
+	//addVelocity = 2.0f * maxJumpHeight * -gravityVector;
+	//addVelocity *= idMath::Sqrt(addVelocity.Normalize());
+	//current.velocity += addVelocity;
 
 	return true;
 }
@@ -1367,7 +1405,13 @@ void idPhysics_Player::SetWaterLevel( void ) {
 	//
 	// get waterlevel, accounting for ducking
 	//
-	waterLevel = WATERLEVEL_NONE;
+	//waterLevel = WATERLEVEL_NONE;
+	if (waterFlag == false){
+		waterLevel = WATERLEVEL_NONE;
+	}
+	else{
+		waterLevel = WATERLEVEL_HEAD;
+	}
 	waterType = 0;
 
 	bounds = clipModel->GetBounds();
@@ -1614,6 +1658,16 @@ idPhysics_Player::HasJumped
 bool idPhysics_Player::HasJumped( void ) const {
 	return ( ( current.movementFlags & PMF_JUMPED ) != 0 );
 }
+
+/*
+/*
+================
+idPhysics_Player::HasDoubleJumped
+================
+*/
+//bool idPhysics_Player::HasDoubleJumped(void) const {
+//	return ((current.movementFlags & PMF_JUMPED) != 0);
+//}
 
 /*
 ================
@@ -2306,4 +2360,25 @@ void idPhysics_Player::SetClipModelNoLink( idClipModel *model ) {
 		delete clipModel;
 	}
 	clipModel = model;
+}
+/*
+===============
+idPhysics_Player::setWater
+===============
+*/
+void idPhysics_Player::SetWater() {
+	waterFlag = true;
+	waterLevel = WATERLEVEL_HEAD;
+	SetWaterLevel();
+
+}
+/*
+===============
+idPhysics_Player::unsetWater
+===============
+*/
+void idPhysics_Player::UnsetWater() {
+	waterFlag = false;
+	waterLevel = WATERLEVEL_NONE;
+	SetWaterLevel();
 }
