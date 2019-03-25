@@ -1,0 +1,48 @@
+//----------------------------------------------------------------
+// gem.def
+//----------------------------------------------------------------
+
+model redgem_model
+{
+        mesh                    models/collectables/redgem.md5mesh
+        
+
+        anim idle               models/collectables/redgem.md5anim
+		
+		
+}
+
+entityDef item_gem{
+	"inherit"				"item_default"
+	"spawnclass"			"idItem"
+	"model"					"models/collectables/gems.lwo"
+	"editor_color"			".3 .3 1"
+	"editor_mins"			"-10 -10 0"
+	"editor_maxs"			"32 32 32"
+	"mins"					"-10 -10 0"
+	"maxs"					"100 100 100"
+	"inv_item"				"1"
+	"editor_copy100"		"inv_item"
+	"snd_acquire"			"pickup_armor"
+	"respawn"				"35"
+	"editor_ignore"			"1"
+	"inv_name"				"#Gem Aquired"	
+}
+entityDef item_gem_red{
+	"inherit"				"item_gem"
+	"spawnclass"			"idItem"
+	"model"					"models/collectables/gems.lwo"
+	"skin"					"models/collectables/Red.tga"
+	"inv_icon"				"models/collectables/Red.tga"
+	"inv_gem"				"item_gem_red"
+	"inv_name"				"#Red Gem Aquired"	
+}
+entityDef item_gem_green{
+	"inherit"				"item_gem"
+	"spawnclass"			"idItem"
+	"model"					"models/collectables/gems.lwo"
+	"skin"					"models/collectables/green.tga"
+	"inv_icon"				"models/collectables/green.tga"
+	"inv_gem"				"item_gem_green"
+	"inv_name"				"#Green Gem Aquired"	
+}
