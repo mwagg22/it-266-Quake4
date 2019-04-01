@@ -43,6 +43,7 @@ CLASS_STATES_DECLARATION ( idPlayer )
 	STATE ( "Legs_Land",					idPlayer::State_Legs_Land )
 	STATE ( "Legs_Dead",					idPlayer::State_Legs_Dead )
 	STATE ( "Legs_Melee",					idPlayer::State_Legs_Melee)
+	STATE ("Legs_Charge",					idPlayer::State_Legs_Charge)
 END_CLASS_STATES
 
 /*
@@ -450,19 +451,18 @@ stateResult_t idPlayer::State_Legs_Idle ( const stateParms_t& parms ) {
 				PostAnimState(ANIMCHANNEL_LEGS, "Legs_Melee", parms.blendFrames);
 				return SRESULT_DONE;
 			}
+			else if (pfl.charge) {
+				PostAnimState(ANIMCHANNEL_LEGS, "Legs_Charge", parms.blendFrames);
+				return SRESULT_DONE;
+			}
 			else if ( !pfl.onGround ) {
 				PostAnimState ( ANIMCHANNEL_LEGS, "Legs_Fall", 4 );
 				return SRESULT_DONE;
 			}else if ( pfl.forward && !pfl.backward ) {
 				if (usercmd.buttons & BUTTON_RUN) {
-					if (pfl.charge){
-						PlayCycle(ANIMCHANNEL_LEGS, "melee_charge", parms.blendFrames);
-						PostAnimState(ANIMCHANNEL_LEGS, "Legs_Run_Forward", parms.blendFrames);
-					}
-					else{
 						PlayCycle(ANIMCHANNEL_LEGS, "run_forward", parms.blendFrames);
 						PostAnimState(ANIMCHANNEL_LEGS, "Legs_Run_Forward", parms.blendFrames);
-					}
+					
 				}
 				else {
 					PlayCycle( ANIMCHANNEL_LEGS, "walk_forward", parms.blendFrames );
@@ -602,11 +602,6 @@ stateResult_t idPlayer::State_Legs_Run_Forward ( const stateParms_t& parms ) {
 		if( usercmd.buttons & BUTTON_RUN ) {
 			return SRESULT_WAIT;
 		}
-		else if (pfl.charge){
-			PlayCycle(ANIMCHANNEL_LEGS, "melee_charge", parms.blendFrames);
-			PostAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", parms.blendFrames);
-			return SRESULT_DONE;
-		}
 		else {
 			
 			PlayCycle( ANIMCHANNEL_LEGS, "walk_forward", parms.blendFrames );
@@ -624,6 +619,50 @@ stateResult_t idPlayer::State_Legs_Run_Forward ( const stateParms_t& parms ) {
 idPlayer::State_Legs_charge_Forward
 ================
 */
+stateResult_t idPlayer::State_Legs_Charge(const stateParms_t& parms) {
+	enum {
+		STAGE_INIT,
+		STAGE_WAIT
+	};
+	switch (parms.stage) {
+	case STAGE_INIT:{
+						if (pfl.onGround) {
+							idVec3	offset;
+							idMat3	playerViewAxis;
+							gameLocal.GetPlayerView(offset, playerViewAxis);
+							physicsObj.SetLinearVelocity(physicsObj.GetLinearVelocity() + (playerViewAxis[2] * 150) + (playerViewAxis[0] * 500));
+										   PlayAnim(ANIMCHANNEL_LEGS, "melee_charge", parms.blendFrames);
+										   //weapon->Attack(true, 1, .4, 0, 1.0f);
+										   gameLocal.Printf("Should charge play animation here \n", element);
+										   return SRESULT_STAGE(STAGE_WAIT);
+										   break;
+							}
+							else
+							{
+								can_attack = true;
+								PostAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", 20);
+								gameLocal.Printf("Got here? \n", element);
+								
+								return SRESULT_DONE;
+								break;
+							}
+						}
+
+	case STAGE_WAIT:{
+						pfl.melee_attacking = false;
+						gameLocal.Printf("false? \n", element);
+						pfl.charge = false;
+						PostAnimState(ANIMCHANNEL_LEGS, "Legs_Charge", 0);
+						return SRESULT_DONE_WAIT;
+						break;
+	}
+
+		pfl.melee_attacking = false;
+		gameLocal.Printf("huh? \n", element);
+		return SRESULT_DONE;
+	}
+}
+
 
 /*
 ================

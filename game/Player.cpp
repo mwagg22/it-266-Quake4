@@ -6185,8 +6185,7 @@ void idPlayer::Melee_Attacks(void){
 			if (pfl.forward){
 				if (!pfl.charge && pfl.onGround){
 					pfl.charge = true;
-					UpdateState();	
-					SetAnimState(ANIMCHANNEL_LEGS, "Legs_Run_Forward", 0);
+					SetAnimState(ANIMCHANNEL_LEGS, "Legs_Charge", 0);
 					UpdateState();
 				}
 			}
@@ -6634,15 +6633,14 @@ idPlayer::Collide
 bool idPlayer::Collide( const trace_t &collision, const idVec3 &velocity ) {
 	idEntity *other;
 	other = gameLocal.entities[ collision.c.entityNum ];
-
 	// allow client-side prediction of item collisions for simple client effects
 	if ( gameLocal.isClient && !other->IsType( idItem::GetClassType() ) ) {
 		return false;
 	}
 
-
 	if (other) {
-		pfl.charge = false;
+
+		//pfl.charge = false;
 		other->Signal( SIG_TOUCH );
 		if ( !spectating ) {
 			if ( other->RespondsTo( EV_Touch ) ) {
@@ -8582,10 +8580,19 @@ void idPlayer::PerformImpulse( int impulse ) {
 							 
 							 break; }
 		//set Flying
-		case IMPULSE_26: {
+		case IMPULSE_26: {	
+							 if (pfl.onGround){
+								 idVec3	offset;
+								 idMat3	playerViewAxis;
+								 gameLocal.GetPlayerView(offset, playerViewAxis);
+								physicsObj.SetLinearVelocity(physicsObj.GetLinearVelocity() + (playerViewAxis[2] * 1200));
+								 break;
+							 }
+							 else{
 								 physicsObj.SetWater();
 								 flying = true;
 								 break;
+							 }
 		}
 		case IMPULSE_14: {
 			NextWeapon();
