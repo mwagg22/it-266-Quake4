@@ -12,3 +12,10 @@ This game you play as spyro the dragon in quake 4.
 Didnt add a complete hud change to reflect game fully.
 Add the mod folder inside the quake 4 directory to run it.
 Or just add the new def folder, model, and dll into the folder.
+
+![github-small](screenshots/spyro%20(1).png)
+![github-small](screenshots/spyro%20(2).png)
+![github-small](screenshots/spyro%20(4).png)
+![github-small](screenshots/spyro%20(6).png)
+![github-small](screenshots/spyro%20(5).png)
+![github-small](screenshots/spyro%20(10).png)
